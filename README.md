@@ -1,0 +1,4 @@
+Codec.js
+========
+
+Codec functions.
