@@ -8,15 +8,9 @@ var _runOnBrowser = "document" in global;
 var Base64      = Codec.Base64;
 var UTF8        = Codec.UTF8;
 var Doubler     = Codec.Doubler;
-var U8A_HEX     = Codec.U8A_HEX;
+var STR_TA      = Codec.STR_TA;
+var TA_STR      = Codec.TA_STR;
 
-var U8A_STR     = Codec.U8A_STR;
-var U16A_STR    = Codec.U16A_STR;
-var U32A_STR    = Codec.U32A_STR;
-
-var STR_U8A     = Codec.STR_U8A;
-var STR_U16A    = Codec.STR_U16A;
-var STR_U32A    = Codec.STR_U32A;
 var MessagePack = Codec.MessagePack;
 var ZLib        = Codec.ZLib;
 
@@ -69,6 +63,8 @@ var test = new Test("Codec", {
         testMessagePack_CyclicReferenceError,
         // --- Ext Types ---
         testMessagePack_Bin, // Uint8Array
+        // --- vs JSON ---
+//      testMessagePack_vs_JSON,
         // --- ZLib ---
       //testMessagePack_ZLib_inflate,
     ]);
@@ -95,8 +91,8 @@ function testBase64(test, pass, miss) {
 function testBase64EncodeAndDecode(test, pass, miss) {
 
     function _test(source) {
-        var base64 = Base64.encode( Codec.STR_U8A(source) );
-        var revert = Codec.U8A_STR( Base64.decode(base64) );
+        var base64 = Base64.encode( STR_TA(source) );
+        var revert = Codec.TA_STR( Base64.decode(base64) );
 
         return source === revert;
     }
@@ -229,7 +225,7 @@ function testDoublerHasTailByte(test, pass, miss) {
     var byteString = "\u0000\u0001\u0002\u0003\u0004\u0005\u0020\u0021\u0032\u0033\u0048\u00fd\u00fe\u00ff";
         byteString += "\u00ff"; // add tail byte
 
-    var u8 = STR_U8A( byteString );
+    var u8 = STR_TA( byteString );
     var u16 = Doubler.encode( u8 );
     var result = Doubler.decode( u16 );
 
@@ -385,9 +381,9 @@ function testDoublerStorage(test, pass, miss) {
                              0xfd, 0xfe,
                              0xff, 0x00]);
 
-    localStorage.setItem(key, U16A_STR( Doubler.encode( u8 )));
+    localStorage.setItem(key, TA_STR( Doubler.encode( u8 )));
 
-    var result = Doubler.decode( STR_U16A( localStorage.getItem(key) || "" ));
+    var result = Doubler.decode( STR_TA( localStorage.getItem(key) || "" , 16));
 
     localStorage.removeItem(key);
 
@@ -414,7 +410,7 @@ function _decodeDoubler(obj) {
 
 function _encodeBase64(size) {
     var u8  = _makeRandomSource(size);
-    var str = U8A_STR( u8 );
+    var str = TA_STR( u8 );
     var now = Date.now();
     var b64 = Base64.btoa( str );
 
@@ -424,7 +420,7 @@ function _decodeBase64(obj) {
     var now = Date.now();
     var str = Base64.atob( obj.b64 );
     var elapsedTime = Date.now() - now;
-    var u8 = STR_U8A( str );
+    var u8 = STR_TA( str );
 
     return { elapsedTime: elapsedTime, u8: u8 };
 }
@@ -839,6 +835,88 @@ function testMessagePack_Bin(test, pass, miss) {
         test.done(pass());
     }
 }
+
+/* keep bench mark
+function testMessagePack_vs_JSON(test, pass, miss) {
+    var result = testMessagePack_vs_JSON_bench(10);
+
+    console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
+
+    var result = testMessagePack_vs_JSON_bench(100);
+
+    console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
+
+    var result = testMessagePack_vs_JSON_bench(1000);
+
+    console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
+
+    var result = testMessagePack_vs_JSON_bench(10000, 1024 * 120); // 120kb buffer
+
+    console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
+
+    test.done(pass());
+}
+
+function testMessagePack_vs_JSON_bench(nodes, bufferSize) {
+    var json = _createRandomJSONObject(nodes);
+
+    var now1    = performance.now();
+    var tmp1    = MessagePack.encode(json, { bufferSize: bufferSize });
+    var now2    = performance.now();
+    var json1   = MessagePack.decode(tmp1);
+    var now3    = performance.now();
+
+    if (!_matchObject(json1, json)) {
+        console.log("unmatch1");
+    }
+
+    var now10   = performance.now();
+    var tmp10   = JSON.stringify(json);
+    var now11   = performance.now();
+    var json2   = JSON.parse(tmp10);
+    var now12   = performance.now();
+
+    if (!_matchObject(json2, json)) {
+        console.log("unmatch2");
+    }
+
+    return {
+        nodes: nodes,
+        "MessagePack.encode": (now2 - now1).toFixed(2) + " ms",
+        "MessagePack.decode": (now3 - now2).toFixed(2) + " ms",
+        "MessagePack total": (now3 - now1).toFixed(2) + " ms",
+        "JSON.stringify": (now11 - now10).toFixed(2) + " ms",
+        "JSON.parse": (now12 - now11).toFixed(2) + " ms",
+        "JSON total": (now12 - now10).toFixed(2) + " ms",
+    };
+}
+
+function _createRandomJSONObject(nodes) {
+    function child(num) {
+        switch ( ((Math.random() * 9) | 0) % 9 ) {
+        case 0: return null; break;
+        case 1: return false; break;
+        case 2: return true; break;
+        case 3: return num.toString(16) + String.fromCharCode(i & 0xffff, i & 0xffff, i & 0xffff, i & 0xffff); break;
+        case 4: return num; break;
+        case 5: return -num; break;
+        case 6: return num / 123.456789; break;
+        case 7: return -(num / 123.456789); break;
+        case 8: return [child(num), child(num + 1), child(num + 2)];
+        }
+        var r = {};
+        r[num] = child(num);
+        return r;
+    }
+
+    var result = {};
+
+    for (var i = 0; i < nodes; ++i) {
+        result[i] = child(i);
+    }
+    return result;
+}
+ */
 
 // === ZLib ================================================
 function testMessagePack_ZLib_inflate(test, pass, miss) {
