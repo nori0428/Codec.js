@@ -1,0 +1,11 @@
+require("../lib/Codec.js");
+require("../lib/MessagePack.js");
+require("../lib/ZLib.js");
+require("../../WebModule/lib/Reflection.js");
+require("../../WebModule/lib/Console.js");
+require("../../WebModule/lib/Valid.js");
+require("../../WebModule/lib/Help.js");
+require("../../WebModule/lib/Task.js");
+require("../../WebModule/lib/Test.js");
+require("../release/Codec.n.min.js");
+require("./testcase.js");
