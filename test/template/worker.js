@@ -11,12 +11,7 @@ onmessage = function(event) {
         self.console.error = function() {};
     }
 
-    importScripts("../lib/Codec.js");
-    importScripts("../lib/MessagePack.js");
-    importScripts("../lib/ZLib.js");
-    importScripts(".././test/wmtools.js");
-    importScripts("../release/Codec.w.min.js");
-    importScripts("./testcase.js");
+    __SCRIPT__
 
     self.postMessage({ TEST_ERROR_MESSAGE: self.TEST_ERROR_MESSAGE || "" });
 };

@@ -1,6 +1,6 @@
 {
   "name": "uupaa.codec.js",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Codec functions.",
   "url": "https://github.com/uupaa/Codec.js",
   "keywords": ["Codec", "UTF8", "Base64", "Doubler", "MessagePack", "Zlib", "uupaa", "WebModule", "Unstable"],
@@ -41,6 +41,10 @@
     "node": {
       "source": ["lib/Codec.js", "lib/MessagePack.js", "lib/ZLib.js"],
       "output": "release/Codec.n.min.js"
+    },
+    "nw": {
+      "source": ["lib/Codec.js", "lib/MessagePack.js", "lib/ZLib.js"],
+      "output": "release/Codec.nw.min.js"
     }
   },
   "dependencies": {
