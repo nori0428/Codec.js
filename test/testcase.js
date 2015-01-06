@@ -32,43 +32,55 @@ var test = new Test("Codec", {
         testBase64Issues2,
         // --- UTF8 ---
         testUTF8EncodeAndDecode,
-        // --- Doubler ---
-        testDoublerBasic,
-        testDoublerHasTailByte,
-        testDoublerEscape,
-      //testBase64_10Byte
-        testBase64_100KB,
-        testDoubler_100KB,
-        testBase64_1MB,
-        testDoubler_1MB,
-        testBase64_5MB,
-        testDoubler_5MB,
-        // --- MessagePack ---
-        testMessagePack_Nil,
-        testMessagePack_Boolean,
-        testMessagePack_Float,
-        testMessagePack_Uint,
-        testMessagePack_Int,
-        testMessagePack_String,
-        testMessagePack_BooleanArray,
-        testMessagePack_Object,
-        testMessagePack_ObjectAndArray,
-        testMessagePack_InvalidTypes,
-        // --- NaN and Infinity ---
-        testMessagePack_NaNFloat,
-        testMessagePack_NaNDouble,
-        testMessagePack_InfinityFloat,
-        testMessagePack_InfinityDouble,
-        testMessagePack_NaN,
-        testMessagePack_Infinity,
-        // --- Cyclic Reference Error ---
-        testMessagePack_CyclicReferenceError,
-        // --- Ext Types ---
-        testMessagePack_Bin, // Uint8Array
-        // --- vs JSON ---
-//      testMessagePack_vs_JSON,
-        // --- ZLib ---
-      //testMessagePack_ZLib_inflate,
+    ]);
+
+    if (Doubler) {
+        test.add([
+            // --- Doubler ---
+            testDoublerBasic,
+            testDoublerHasTailByte,
+            testDoublerEscape,
+          //testBase64_10Byte
+            testBase64_100KB,
+            testDoubler_100KB,
+            testBase64_1MB,
+            testDoubler_1MB,
+            testBase64_5MB,
+            testDoubler_5MB,
+        ]);
+    }
+    if (MessagePack) {
+        test.add([
+            // --- MessagePack ---
+            testMessagePack_Nil,
+            testMessagePack_Boolean,
+            testMessagePack_Float,
+            testMessagePack_Uint,
+            testMessagePack_Int,
+            testMessagePack_String,
+            testMessagePack_BooleanArray,
+            testMessagePack_Object,
+            testMessagePack_ObjectAndArray,
+            testMessagePack_InvalidTypes,
+            // --- NaN and Infinity ---
+            testMessagePack_NaNFloat,
+            testMessagePack_NaNDouble,
+            testMessagePack_InfinityFloat,
+            testMessagePack_InfinityDouble,
+            testMessagePack_NaN,
+            testMessagePack_Infinity,
+            // --- Cyclic Reference Error ---
+            testMessagePack_CyclicReferenceError,
+            // --- Ext Types ---
+            testMessagePack_Bin, // Uint8Array
+            // --- vs JSON ---
+    //      testMessagePack_vs_JSON,
+        ]);
+    if (Zlib) {
+        test.add([
+            // --- ZLib ---
+          //testMessagePack_ZLib_inflate,
+        ]);
     ]);
 
 if (typeof document !== "undefined" && global.localStorage) {
