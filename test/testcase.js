@@ -76,12 +76,13 @@ var test = new Test("Codec", {
             // --- vs JSON ---
     //      testMessagePack_vs_JSON,
         ]);
-    if (Zlib) {
+    }
+    if (ZLib) {
         test.add([
             // --- ZLib ---
           //testMessagePack_ZLib_inflate,
         ]);
-    ]);
+    }
 
 if (typeof document !== "undefined" && global.localStorage) {
     test.add([ testDoublerStorage ]);
