@@ -8,7 +8,7 @@ lint/plato/*.html
 .Minify*
 release/*.min.js
 test/index.html
-test/node.js
+#test/node.js
 test/nw.html
 test/package.json
 test/wmtools.js
