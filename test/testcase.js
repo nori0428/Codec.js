@@ -24,6 +24,8 @@ var test = new Test("Codec", {
         button:     true,
         both:       true,
     }).add([
+        // --- TypedArray and ArrayBuffer ---
+        testTypedArrayAndArrayBuffer,
         // --- Base64 ---
         testBase64,
         testBase64EncodeAndDecode,
@@ -89,6 +91,144 @@ if (typeof document !== "undefined" && global.localStorage) {
 }
 
 return test.run().clone();
+
+// ---------------------------------------------------------
+function testTypedArrayAndArrayBuffer(test, pass, miss) {
+    //
+    // 1. ArrayBuffer.slice() は新たにメモリを確保し、配列の一部をコピーする
+    //
+    //
+    // 2. TypedArray#subarray は ArrayBuffer の View を作成するだけで、メモリは共有する
+    //    subarrayは低コストだが、引数で渡された ArrayBuffer を使いまわす場合は、
+    //    破壊的な動作になるので注意が必要
+
+    // ArrayBuffer を共有する2つのView(u8,u32)を作成し、
+    // ArrayBuffer が正しく共有されている事を確認します。
+    var ab  = new ArrayBuffer(8);           // ab  = [00,00,00,00,00,00,00,00]
+    var u8  = new Uint8Array(ab);           // u8  = [00,00,00,00,00,00,00,00]
+    var u32 = new Uint32Array(ab);          // u32 = [00000000,   00000000]
+
+    // u8 と u32 は ArrayBuffer を共有しているため、
+    // u8[n] に値を設定すると u32[n] の値も変化します
+    u8.set([0, 1, 2, 3, 4, 5, 6, 7]);       // u8  = [00,01,02,03,04,05,06,07]
+
+    if ( Test.likeArray(u8, [0, 1, 2, 3, 4, 5, 6, 7]) ) {
+        console.log( Test.toHex(u8), Test.toHex(u32) );
+    } else {
+        console.log( Test.toHex(u8) );
+        test.done(miss());
+    }
+    if ( Test.likeArray(u32, Codec["BIG_ENDIAN"] ? [0x00010203, 0x04050607]
+                                                 : [0x03020100, 0x07060504]) ) {
+        console.log( Test.toHex(u8), Test.toHex(u32) );
+    } else {
+        console.log( Test.toHex(u32) );
+        test.done(miss());
+    }
+
+    // ArrayBuffer#slice を行い
+    // u8 と cu8 でバッファが共有されていない事を確認します
+    var cu8 = new Uint8Array(ab.slice(0));  // ArrayBufferのコピーを作成する
+
+  //u8                                      // u8  = [00,01,02,03,04,05,06,07]
+    cu8[0] = 0xFF;                          // cu8 = [FF,01,02,03,04,05,06,07]
+
+    if ( !Test.likeArray(u8, cu8) ) { // 違うはず
+        console.log( Test.toHex(u8), Test.toHex(cu8) );
+    } else {
+        console.log( Test.toHex(u8), Test.toHex(cu8) );
+        test.done(miss());
+    }
+    cu8 = null;
+
+    // u82 = u8.subarray(2, 6) は
+    //       [00,01,02,03,04,05,06,07] から
+    //             [02,03,04,05] な view を作ります。length は 4 です
+
+    var u82 = u8.subarray(2, 6);
+    if (u82.length === 4) {
+        // OK
+    } else {
+        test.done(miss());
+    }
+
+    // u82とu8は1つのArrayBufferを共有しているため
+    // u82[0] = 0x22 を行うと、
+    // u8[2] も 0x22 になります。
+
+    u82[0] = 0x22;
+    if (u8[2] === 0x22) {
+        // OK
+    } else {
+        test.done(miss());
+    }
+    console.log( Test.toHex(u8), Test.toHex(u82) );
+
+    // u82 の length は 4 しかないため、u82[5] = 0x00 は無効です。
+    // また u82[5] に相当する u8[7] の値も変化せず 0x07 のままです
+
+    u82[5] = 0x00;
+
+    if (u82[5] === undefined && u8[7] === 0x07) {
+        // OK
+    } else {
+        test.done(miss());
+    }
+
+    // u82.set([0xFF,0xEE,0xDD,0xCC]) を行うと
+    // u8 は [00,01,FF,EE,DD,CC,06,07] になります
+    u82.set([0xFF,0xEE,0xDD,0xCC]);
+
+    if (u8[0] === 0x00 &&
+        u8[1] === 0x01 &&
+        u8[2] === 0xFF &&
+        u8[3] === 0xEE &&
+        u8[4] === 0xDD &&
+        u8[5] === 0xCC &&
+        u8[6] === 0x06 &&
+        u8[7] === 0x07) {
+        // OK
+    } else {
+        test.done(miss());
+    }
+
+    // u82 をループでダンプしてみます
+    // 0xFF,0xEE,0xDD,0xCC がダンプされます
+    for (var i = 0, iz = u82.length; i < iz; ++i) {
+        console.log(u82[i]);
+    }
+
+    // ArrayBuffer.slice が内部的に行っている事をfor文で書いてみる
+    (function() {
+        var ab1 = new ArrayBuffer(8);
+        var u81 = new Uint8Array(ab1);
+        u81.set([0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07]);
+        var ab2 = ab1.slice(1,7); // 6bytes
+        var u82 = new Uint8Array(ab2);
+
+        var ab3 = new ArrayBuffer(8);
+        var u83 = new Uint8Array(ab3);
+        u83.set([0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07]);
+        var ab4 = new ArrayBuffer(6);
+        var u84 = new Uint8Array(ab4); // ArrayBufferのバイトデータに直接アクセスできないためViewを作成する
+
+        // ループでバイトコピー
+        for (var dest = 0, src = 1; src < 7;) {
+            u84[dest++] = u83[src++];
+        }
+
+        if (Test.likeArray(u81, u83) &&
+            Test.likeArray(u82, u84)) {
+            // OK
+        } else {
+            console.log( Test.toHex(u81), Test.toHex(u83) );
+            console.log( Test.toHex(u82), Test.toHex(u84) );
+            test.done(miss());
+        }
+    })();
+
+    test.done(pass());
+}
 
 function testBase64(test, pass, miss) {
 
@@ -214,7 +354,7 @@ function testUTF8EncodeAndDecode(test, pass, miss) {
     var u8 = UTF8.encode( u32 );
     var result = UTF8.decode(u8);
 
-    if (_matchArray(source, result)) {
+    if (Test.likeArray(source, result)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -228,7 +368,7 @@ function testDoublerBasic(test, pass, miss) {
     var u16    = Doubler.encode( u8 );
     var result = Doubler.decode( u16 );
 
-    if (_matchArray(u8, result)) {
+    if (Test.likeArray(u8, result)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -244,7 +384,7 @@ function testDoublerHasTailByte(test, pass, miss) {
     var u16 = Doubler.encode( u8 );
     var result = Doubler.decode( u16 );
 
-    if (_matchArray(u8, result)) {
+    if (Test.likeArray(u8, result)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -264,7 +404,7 @@ function testDoublerEscape(test, pass, miss) {
     var u16    = Doubler.encode( u8 );
     var result = Doubler.decode( u16 );
 
-    if (_matchArray(u8, result)) {
+    if (Test.likeArray(u8, result)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -280,7 +420,7 @@ function testBase64_10Byte(test, pass, miss) {
                 ", encode: " + obj1.elapsedTime + " ms" +
                 ", decode: " + obj2.elapsedTime + " ms" +
                 ", words: " + ((obj1.b64.length / 1024) | 0) + " k");
-    if (_matchArray(obj1.u8, obj2.u8)) {
+    if (Test.likeArray(obj1.u8, obj2.u8)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -295,7 +435,7 @@ function testBase64_100KB(test, pass, miss) {
                 ", encode: " + obj1.elapsedTime + " ms" +
                 ", decode: " + obj2.elapsedTime + " ms" +
                 ", words: " + ((obj1.b64.length / 1024) | 0) + " k");
-    if (_matchArray(obj1.u8, obj2.u8)) {
+    if (Test.likeArray(obj1.u8, obj2.u8)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -311,7 +451,7 @@ function testDoubler_100KB(test, pass, miss) {
                 ", encode: " + obj1.elapsedTime + " ms" +
                 ", decode: " + obj2.elapsedTime + " ms" +
                 ", words: " + ((obj1.u16.length / 1024) | 0) + " k");
-    if (_matchArray(obj1.u8, obj2.u8)) {
+    if (Test.likeArray(obj1.u8, obj2.u8)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -328,7 +468,7 @@ function testBase64_1MB(test, pass, miss) {
                 ", encode: " + obj1.elapsedTime + " ms" +
                 ", decode: " + obj2.elapsedTime + " ms" +
                 ", words: " + ((obj1.b64.length / 1024) | 0) + " k");
-    if (_matchArray(obj1.u8, obj2.u8)) {
+    if (Test.likeArray(obj1.u8, obj2.u8)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -344,7 +484,7 @@ function testDoubler_1MB(test, pass, miss) {
                 ", encode: " + obj1.elapsedTime + " ms" +
                 ", decode: " + obj2.elapsedTime + " ms" +
                 ", words: " + ((obj1.u16.length / 1024) | 0) + " k");
-    if (_matchArray(obj1.u8, obj2.u8)) {
+    if (Test.likeArray(obj1.u8, obj2.u8)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -361,7 +501,7 @@ function testBase64_5MB(test, pass, miss) {
                 ", encode: " + obj1.elapsedTime + " ms" +
                 ", decode: " + obj2.elapsedTime + " ms" +
                 ", words: " + ((obj1.b64.length / 1024) | 0) + " k");
-    if (_matchArray(obj1.u8, obj2.u8)) {
+    if (Test.likeArray(obj1.u8, obj2.u8)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -377,7 +517,7 @@ function testDoubler_5MB(test, pass, miss) {
                 ", encode: " + obj1.elapsedTime + " ms" +
                 ", decode: " + obj2.elapsedTime + " ms" +
                 ", words: " + ((obj1.u16.length / 1024) | 0) + " k");
-    if (_matchArray(obj1.u8, obj2.u8)) {
+    if (Test.likeArray(obj1.u8, obj2.u8)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -402,7 +542,7 @@ function testDoublerStorage(test, pass, miss) {
 
     localStorage.removeItem(key);
 
-    if (_matchArray(u8, result)) {
+    if (Test.likeArray(u8, result)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -449,24 +589,6 @@ function _makeRandomSource(length) { // @arg Number:
     }
     return source;
 }
-
-// ---------------------------------------------------------
-function _matchArray(a, b) {
-    if (a.length !== b.length) {
-        return false;
-    }
-    for (var i = 0, iz = a.length; i < iz; ++i) {
-        if ( a[i] !== b[i] ) {
-            return false;
-        }
-    }
-    return true;
-}
-function _matchObject(a, b) {
-    return JSON.stringify(a) === JSON.stringify(b);
-}
-
-
 
 // === MessagePack =========================================
 function testMessagePack_Nil(test, pass, miss) {
@@ -648,7 +770,7 @@ function testMessagePack_BooleanArray(test, pass, miss) {
     var packed = MessagePack.encode(source);
     var result = MessagePack.decode(packed);
 
-    if (_matchArray(source, result)) {
+    if (Test.likeArray(source, result)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -675,15 +797,15 @@ function testMessagePack_Object(test, pass, miss) {
                 //  241, 194, 143, 92, 40, 245, 195]
     ];
     var cases = {
-        "0": _matchObject(MessagePack.decode(MessagePack.encode(source[0])), source[0]),
-        "1": _matchObject(MessagePack.decode(MessagePack.encode(source[1])), source[1]),
-        "2": _matchObject(MessagePack.decode(MessagePack.encode(source[2])), source[2]),
-        "3": _matchObject(MessagePack.decode(MessagePack.encode(source[3])), source[3]),
-        "4": _matchObject(MessagePack.decode(MessagePack.encode(source[4])), source[4]),
-        "5": _matchObject(MessagePack.decode(MessagePack.encode(source[5])), source[5]),
-        "6": _matchObject(MessagePack.decode(MessagePack.encode(source[6])), source[6]),
-        "7": _matchObject(MessagePack.decode(MessagePack.encode(source[7])), source[7]),
-        "8": _matchObject(MessagePack.decode(MessagePack.encode(source[8])), source[8]),
+        "0": Test.likeObject(MessagePack.decode(MessagePack.encode(source[0])), source[0]),
+        "1": Test.likeObject(MessagePack.decode(MessagePack.encode(source[1])), source[1]),
+        "2": Test.likeObject(MessagePack.decode(MessagePack.encode(source[2])), source[2]),
+        "3": Test.likeObject(MessagePack.decode(MessagePack.encode(source[3])), source[3]),
+        "4": Test.likeObject(MessagePack.decode(MessagePack.encode(source[4])), source[4]),
+        "5": Test.likeObject(MessagePack.decode(MessagePack.encode(source[5])), source[5]),
+        "6": Test.likeObject(MessagePack.decode(MessagePack.encode(source[6])), source[6]),
+        "7": Test.likeObject(MessagePack.decode(MessagePack.encode(source[7])), source[7]),
+        "8": Test.likeObject(MessagePack.decode(MessagePack.encode(source[8])), source[8]),
     };
 
     var result = JSON.stringify(cases, null, 2);
@@ -706,7 +828,7 @@ function testMessagePack_ObjectAndArray(test, pass, miss) {
             111, 103, 101, 163, 97, 98, 99
         ];
 
-    if (_matchObject(source, result) && _matchArray(packed, compare)) {
+    if (Test.likeObject(source, result) && Test.likeArray(packed, compare)) {
         test.done(pass());
     } else {
         test.done(miss());
@@ -837,8 +959,8 @@ function testMessagePack_Bin(test, pass, miss) {
         new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
     ];
     var cases = {
-        "0": _matchArray(MessagePack.decode(MessagePack.encode(source[0])), source[0]),
-        "1": _matchArray(MessagePack.decode(MessagePack.encode(source[1])), source[1]),
+        "0": Test.likeArray(MessagePack.decode(MessagePack.encode(source[0])), source[0]),
+        "1": Test.likeArray(MessagePack.decode(MessagePack.encode(source[1])), source[1]),
     };
 
     var result = JSON.stringify(cases, null, 2);
@@ -881,7 +1003,7 @@ function testMessagePack_vs_JSON_bench(nodes, bufferSize) {
     var json1   = MessagePack.decode(tmp1);
     var now3    = performance.now();
 
-    if (!_matchObject(json1, json)) {
+    if (!Test.likeObject(json1, json)) {
         console.log("unmatch1");
     }
 
@@ -891,7 +1013,7 @@ function testMessagePack_vs_JSON_bench(nodes, bufferSize) {
     var json2   = JSON.parse(tmp10);
     var now12   = performance.now();
 
-    if (!_matchObject(json2, json)) {
+    if (!Test.likeObject(json2, json)) {
         console.log("unmatch2");
     }
 

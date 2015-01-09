@@ -1,6 +1,6 @@
 {
   "name": "uupaa.codec.js",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Codec functions.",
   "url": "https://github.com/uupaa/Codec.js",
   "keywords": ["Codec", "UTF8", "Base64", "Doubler", "MessagePack", "Zlib", "uupaa", "WebModule", "Unstable"],
