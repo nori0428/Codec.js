@@ -76,7 +76,7 @@ var test = new Test("Codec", {
             // --- Ext Types ---
             testMessagePack_Bin, // Uint8Array
             // --- vs JSON ---
-    //      testMessagePack_vs_JSON,
+            testMessagePack_vs_JSON_BenchMark,
         ]);
     }
     if (ZLib) {
@@ -973,8 +973,7 @@ function testMessagePack_Bin(test, pass, miss) {
     }
 }
 
-/* keep bench mark
-function testMessagePack_vs_JSON(test, pass, miss) {
+function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
     var result = testMessagePack_vs_JSON_bench(10);
 
     console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
@@ -987,18 +986,18 @@ function testMessagePack_vs_JSON(test, pass, miss) {
 
     console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
 
-    var result = testMessagePack_vs_JSON_bench(10000, 1024 * 120); // 120kb buffer
+    var result = testMessagePack_vs_JSON_bench(10000);
 
     console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
 
     test.done(pass());
 }
 
-function testMessagePack_vs_JSON_bench(nodes, bufferSize) {
+function testMessagePack_vs_JSON_bench(nodes) {
     var json = _createRandomJSONObject(nodes);
 
     var now1    = performance.now();
-    var tmp1    = MessagePack.encode(json, { bufferSize: bufferSize });
+    var tmp1    = MessagePack.encode(json);
     var now2    = performance.now();
     var json1   = MessagePack.decode(tmp1);
     var now3    = performance.now();
@@ -1053,7 +1052,6 @@ function _createRandomJSONObject(nodes) {
     }
     return result;
 }
- */
 
 // === ZLib ================================================
 function testMessagePack_ZLib_inflate(test, pass, miss) {
