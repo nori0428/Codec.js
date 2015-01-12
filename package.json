@@ -50,7 +50,9 @@
   "dependencies": {
     "uupaa.hash.js": ""
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "uupaa.random.js": ""
+  },
   "lib": "./lib/",
   "main": "./index.js",
   "author": "uupaa",

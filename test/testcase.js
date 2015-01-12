@@ -6,37 +6,43 @@ var _runOnNode       =  _isNodeOrNodeWebKit && !/native/.test(setTimeout);
 var _runOnWorker     = !_isNodeOrNodeWebKit && "WorkerLocation" in global;
 var _runOnBrowser    = !_isNodeOrNodeWebKit && "document" in global;
 
-var Base64      = Codec.Base64;
-var UTF8        = Codec.UTF8;
-var Doubler     = Codec.Doubler;
-var STR_TA      = Codec.STR_TA;
-var TA_STR      = Codec.TA_STR;
-
-var MessagePack = Codec.MessagePack;
-var ZLib        = Codec.ZLib;
-
 var test = new Test("Codec", {
         disable:    false,
         browser:    true,
-        worker:     true,
-        node:       true,
-        nw:         true,
-        button:     true,
-        both:       true,
-    }).add([
-        // --- TypedArray and ArrayBuffer ---
-        testTypedArrayAndArrayBuffer,
-        // --- Base64 ---
-        testBase64,
-        testBase64EncodeAndDecode,
-        testBase64atobAndbtoa,
-//      testBase64Random,
-        testBase64Issues2,
-        // --- UTF8 ---
-        testUTF8EncodeAndDecode,
-    ]);
+        worker:     false,
+        node:       false,
+        nw:         false,
+        button:     false,
+        both:       false,
+        ignoreError:false,
+    });
 
-    if (Doubler) {
+if (0) {
+    if (_runOnNodeWebKit || _runOnWorker || _runOnBrowser) {
+        if (typeof Uint8Array !== "undefined") {
+            test.add([
+                // --- TypedArray and ArrayBuffer ---
+                testTypedArrayAndArrayBuffer,
+            ]);
+        }
+    }
+    if (Codec.Base64) {
+        test.add([
+            // --- Base64 ---
+            testBase64,
+            testBase64EncodeAndDecode,
+            testBase64atobAndbtoa,
+    //      testBase64Random,
+            testBase64Issues2,
+        ]);
+    }
+    if (Codec.UTF8) {
+        test.add([
+            // --- UTF8 ---
+            testUTF8EncodeAndDecode,
+        ]);
+    }
+    if (Codec.Doubler) {
         test.add([
             // --- Doubler ---
             testDoublerBasic,
@@ -51,7 +57,7 @@ var test = new Test("Codec", {
             testDoubler_5MB,
         ]);
     }
-    if (MessagePack) {
+    if (Codec.MessagePack) {
         test.add([
             // --- MessagePack ---
             testMessagePack_Nil,
@@ -75,19 +81,28 @@ var test = new Test("Codec", {
             testMessagePack_CyclicReferenceError,
             // --- Ext Types ---
             testMessagePack_Bin, // Uint8Array
-            // --- vs JSON ---
-            testMessagePack_vs_JSON_BenchMark,
         ]);
     }
-    if (ZLib) {
+    if (Codec.ZLib) {
         test.add([
             // --- ZLib ---
           //testMessagePack_ZLib_inflate,
         ]);
     }
+}
 
-if (typeof document !== "undefined" && global.localStorage) {
-    test.add([ testDoublerStorage ]);
+if (1) {
+    if (Codec.MessagePack) {
+        test.add([
+            testMessagePack_vs_JSON_BenchMark,
+        ]);
+    }
+}
+
+if (0) {
+    if (typeof document !== "undefined" && global.localStorage) {
+        test.add([ testDoublerStorage ]);
+    }
 }
 
 return test.run().clone();
@@ -233,8 +248,8 @@ function testTypedArrayAndArrayBuffer(test, pass, miss) {
 function testBase64(test, pass, miss) {
 
     var source = "1234567890ABCDEFGHIJKLMN";
-    var base64 = Base64.btoa(source); // "MTIzNDU2Nzg5MEFCQ0RFRkdISUpLTE1O"
-    var revert = Base64.atob(base64);
+    var base64 = Codec.Base64.btoa(source); // "MTIzNDU2Nzg5MEFCQ0RFRkdISUpLTE1O"
+    var revert = Codec.Base64.atob(base64);
 
     if (source === revert) {
         test.done(pass());
@@ -246,8 +261,8 @@ function testBase64(test, pass, miss) {
 function testBase64EncodeAndDecode(test, pass, miss) {
 
     function _test(source) {
-        var base64 = Base64.encode( STR_TA(source) );
-        var revert = Codec.TA_STR( Base64.decode(base64) );
+        var base64 = Codec.Base64.encode( Codec.STR_TA(source) );
+        var revert = Codec.TA_STR( Codec.Base64.decode(base64) );
 
         return source === revert;
     }
@@ -268,8 +283,8 @@ function testBase64EncodeAndDecode(test, pass, miss) {
 function testBase64atobAndbtoa(test, pass, miss) {
 
     var source = "1234567890ABCDEFGHIJKLMN";
-    var base64 = Base64.btoa(source); // "MTIzNDU2Nzg5MEFCQ0RFRkdISUpLTE1O"
-    var revert = Base64.atob(base64);
+    var base64 = Codec.Base64.btoa(source); // "MTIzNDU2Nzg5MEFCQ0RFRkdISUpLTE1O"
+    var revert = Codec.Base64.atob(base64);
 
     if (source === revert) {
         test.done(pass());
@@ -283,8 +298,8 @@ function testBase64Random(test, pass, miss) {
 
     function _testEncodeTypedArray(source) {
         var typedSource = new Uint8Array(source);
-        var typedBase64 = Base64.encode( typedSource );
-        var typedRevert = Base64.decode( typedBase64 );
+        var typedBase64 = Codec.Base64.encode( typedSource );
+        var typedRevert = Codec.Base64.decode( typedBase64 );
 
         return JSON.stringify(Array.prototype.slice.call(typedSource)) ===
                JSON.stringify(Array.prototype.slice.call(typedRevert));
@@ -325,8 +340,8 @@ function testBase64Issues2(test, pass, miss) {
 
     if (_runOnNode) {
         // wrong way
-        b64 = Base64.btoa(source);
-        revert = Base64.atob(b64);
+        b64 = Codec.Base64.btoa(source);
+        revert = Codec.Base64.atob(b64);
         //console.log(source, b64, revert);
         // good way
         b64 = new Buffer(source, "base64").toString("binary")
@@ -351,8 +366,8 @@ function testUTF8EncodeAndDecode(test, pass, miss) {
   //var source = "\u3042\u3044\u3046\u3048\u304a"; // <japanese> A I U E O </japanese>
     var source = [0x3042, 0x3044, 0x3046, 0x3048, 0x304a];
     var u32 = new Uint32Array(source); // <japanese> A I U E O </japanese>
-    var u8 = UTF8.encode( u32 );
-    var result = UTF8.decode(u8);
+    var u8 = Codec.UTF8.encode( u32 );
+    var result = Codec.UTF8.decode(u8);
 
     if (Test.likeArray(source, result)) {
         test.done(pass());
@@ -365,8 +380,8 @@ function testUTF8EncodeAndDecode(test, pass, miss) {
 function testDoublerBasic(test, pass, miss) {
 
     var u8     = new Uint8Array([0x42, 0x44, 0x46, 0x48, 0x4a]);
-    var u16    = Doubler.encode( u8 );
-    var result = Doubler.decode( u16 );
+    var u16    = Codec.Doubler.encode( u8 );
+    var result = Codec.Doubler.decode( u16 );
 
     if (Test.likeArray(u8, result)) {
         test.done(pass());
@@ -380,9 +395,9 @@ function testDoublerHasTailByte(test, pass, miss) {
     var byteString = "\u0000\u0001\u0002\u0003\u0004\u0005\u0020\u0021\u0032\u0033\u0048\u00fd\u00fe\u00ff";
         byteString += "\u00ff"; // add tail byte
 
-    var u8 = STR_TA( byteString );
-    var u16 = Doubler.encode( u8 );
-    var result = Doubler.decode( u16 );
+    var u8 = Codec.STR_TA( byteString );
+    var u16 = Codec.Doubler.encode( u8 );
+    var result = Codec.Doubler.decode( u16 );
 
     if (Test.likeArray(u8, result)) {
         test.done(pass());
@@ -401,8 +416,8 @@ function testDoublerEscape(test, pass, miss) {
                              0x00, 0x20,  // -> 0x20
                              0xd8, 0x00,  // -> 0xd800 (SurrogatePairs)
                              0xdf, 0xff]);// -> 0xdfff (SurrogatePairs)
-    var u16    = Doubler.encode( u8 );
-    var result = Doubler.decode( u16 );
+    var u16    = Codec.Doubler.encode( u8 );
+    var result = Codec.Doubler.decode( u16 );
 
     if (Test.likeArray(u8, result)) {
         test.done(pass());
@@ -536,9 +551,9 @@ function testDoublerStorage(test, pass, miss) {
                              0xfd, 0xfe,
                              0xff, 0x00]);
 
-    localStorage.setItem(key, TA_STR( Doubler.encode( u8 )));
+    localStorage.setItem(key, Codec.TA_STR( Codec.Doubler.encode( u8 )));
 
-    var result = Doubler.decode( STR_TA( localStorage.getItem(key) || "" , 16));
+    var result = Codec.Doubler.decode( Codec.STR_TA( localStorage.getItem(key) || "" , 16));
 
     localStorage.removeItem(key);
 
@@ -552,30 +567,30 @@ function testDoublerStorage(test, pass, miss) {
 function _encodeDoubler(size) {
     var u8  = _makeRandomSource(size);
     var now = Date.now();
-    var u16 = Doubler.encode( u8 );
+    var u16 = Codec.Doubler.encode( u8 );
 
     return { elapsedTime: Date.now() - now, u8: u8, u16: u16 };
 }
 function _decodeDoubler(obj) {
     var now = Date.now();
-    var u8  = Doubler.decode( obj.u16 );
+    var u8  = Codec.Doubler.decode( obj.u16 );
 
     return { elapsedTime: Date.now() - now, u8: u8 };
 }
 
 function _encodeBase64(size) {
     var u8  = _makeRandomSource(size);
-    var str = TA_STR( u8 );
+    var str = Codec.TA_STR( u8 );
     var now = Date.now();
-    var b64 = Base64.btoa( str );
+    var b64 = Codec.Base64.btoa( str );
 
     return { elapsedTime: Date.now() - now, u8: u8, b64: b64 };
 }
 function _decodeBase64(obj) {
     var now = Date.now();
-    var str = Base64.atob( obj.b64 );
+    var str = Codec.Base64.atob( obj.b64 );
     var elapsedTime = Date.now() - now;
-    var u8 = STR_TA( str );
+    var u8 = Codec.STR_TA( str );
 
     return { elapsedTime: elapsedTime, u8: u8 };
 }
@@ -592,6 +607,7 @@ function _makeRandomSource(length) { // @arg Number:
 
 // === MessagePack =========================================
 function testMessagePack_Nil(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var cases = {
         "null":     MessagePack.decode(MessagePack.encode(null)) === null,
         "undefined":MessagePack.decode(MessagePack.encode(undefined)) == null,
@@ -606,6 +622,7 @@ function testMessagePack_Nil(test, pass, miss) {
     }
 }
 function testMessagePack_Boolean(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var cases = {
         "f_alse":   MessagePack.decode(MessagePack.encode(false)) === false,
         "true":     MessagePack.decode(MessagePack.encode(true)) === true,
@@ -620,6 +637,7 @@ function testMessagePack_Boolean(test, pass, miss) {
     }
 }
 function testMessagePack_Float(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var cases = {
         "-0.0":     MessagePack.decode(MessagePack.encode(-0.0)) === -0.0,
         "+0.0":     MessagePack.decode(MessagePack.encode(+0.0)) === +0.0,
@@ -648,6 +666,7 @@ function testMessagePack_Float(test, pass, miss) {
     }
 }
 function testMessagePack_Uint(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var cases = {
         // FixNum
         "0":    MessagePack.decode(MessagePack.encode(0)) === 0, // [0x00]
@@ -674,6 +693,7 @@ function testMessagePack_Uint(test, pass, miss) {
         // Uint64
         "4294967296": MessagePack.decode(MessagePack.encode(4294967296)) === 4294967296, // 0x100000000
         "4294967297": MessagePack.decode(MessagePack.encode(4294967297)) === 4294967297, // 0x100000001
+        "4294967298": MessagePack.decode(MessagePack.encode(4294967298)) === 4294967298, // 0x100000002
         // IEEE754
         "0x80000000000000": true,   // Accuracy problems. IEEE754
         "0x7fffffffffffffff": true, // Accuracy problems. IEEE754
@@ -688,6 +708,7 @@ function testMessagePack_Uint(test, pass, miss) {
     }
 }
 function testMessagePack_Int(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var cases = {
         // FixNum
         "-0":           MessagePack.decode(MessagePack.encode(-0)) === -0, // [0x00]
@@ -722,9 +743,10 @@ function testMessagePack_Int(test, pass, miss) {
         "-2147483648":  MessagePack.decode(MessagePack.encode(-2147483648)) === -2147483648, // [0xd3, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00]
         "-4294967293":  MessagePack.decode(MessagePack.encode(-4294967293)) === -4294967293, // [0xd3, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x03]
         "-4294967294":  MessagePack.decode(MessagePack.encode(-4294967294)) === -4294967294, // [0xd3, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x02]
-        "-4294967295":  MessagePack.decode(MessagePack.encode(-4294967295)) === -4294967295, // [0xd3, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01]
-        "-4294967296":  MessagePack.decode(MessagePack.encode(-4294967296)) === -4294967296, // [0xd3, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00]
-        "-4294967297":  MessagePack.decode(MessagePack.encode(-4294967297)) === -4294967297, // [0xd3, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff]
+        "-4294967295":  MessagePack.decode(MessagePack.encode(-4294967295)) === -4294967295, // [0xd3, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01] -4294967295(-0x0ffffffff)
+        "-4294967296":  MessagePack.decode(MessagePack.encode(-4294967296)) === -4294967296, // [0xd3, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00] -4294967296(-0x100000000)
+        "-4294967297":  MessagePack.decode(MessagePack.encode(-4294967297)) === -4294967297, // [0xd3, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff] -4294967297(-0x100000001)
+        "-4294967298":  MessagePack.decode(MessagePack.encode(-4294967298)) === -4294967298, // [0xd3, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xfe] -4294967298(-0x100000002)
         "-549755813888":MessagePack.decode(MessagePack.encode(-549755813888)) === -549755813888, // [0xd3, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00]
         "-0x1fffffffffffff": true, // IEEE754
         "-0x20000000000000": true, // IEEE754
@@ -741,6 +763,7 @@ function testMessagePack_Int(test, pass, miss) {
 }
 
 function testMessagePack_String(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var source = [
         "",
         "Hello",
@@ -765,6 +788,7 @@ function testMessagePack_String(test, pass, miss) {
 }
 
 function testMessagePack_BooleanArray(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
 
     var source = [true, false];
     var packed = MessagePack.encode(source);
@@ -778,6 +802,7 @@ function testMessagePack_BooleanArray(test, pass, miss) {
 }
 
 function testMessagePack_Object(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var source = [
         {}, // [0x80]
         { a: 0, b: 0 },
@@ -819,6 +844,7 @@ function testMessagePack_Object(test, pass, miss) {
 }
 
 function testMessagePack_ObjectAndArray(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var source = { a: [1, 2, 3, { b: 4, c: "hoge" }, "abc"] };
     var packed = MessagePack.encode(source);
     var result = MessagePack.decode(packed);
@@ -836,6 +862,7 @@ function testMessagePack_ObjectAndArray(test, pass, miss) {
 }
 
 function testMessagePack_InvalidTypes(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
 
     try {
         var source = new Date;
@@ -867,6 +894,7 @@ function testMessagePack_InvalidTypes(test, pass, miss) {
 }
 
 function testMessagePack_NaNFloat(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var result = MessagePack.decode(new Uint8Array([0xca, 0x7f, 0xbf, 0xff, 0xff]));
 
     if (isNaN(result)) {
@@ -877,6 +905,7 @@ function testMessagePack_NaNFloat(test, pass, miss) {
 }
 
 function testMessagePack_NaNDouble(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var result = MessagePack.decode(new Uint8Array([0xcb, 0xff, 0xf7, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]));
 
     if (isNaN(result)) {
@@ -887,6 +916,7 @@ function testMessagePack_NaNDouble(test, pass, miss) {
 }
 
 function testMessagePack_InfinityFloat(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var result = MessagePack.decode(new Uint8Array([0xca, 0xff, 0x80, 0x00, 0x00]));
 
     if (result === Infinity || result === -Infinity) {
@@ -897,6 +927,7 @@ function testMessagePack_InfinityFloat(test, pass, miss) {
 }
 
 function testMessagePack_InfinityDouble(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var result = MessagePack.decode(new Uint8Array([0xcb, 0xff, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]));
 
     if (result === Infinity || result === -Infinity) {
@@ -907,6 +938,7 @@ function testMessagePack_InfinityDouble(test, pass, miss) {
 }
 
 function testMessagePack_NaN(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var source = NaN;
     var packed = MessagePack.encode(source);
     var result = MessagePack.decode(packed);
@@ -919,6 +951,7 @@ function testMessagePack_NaN(test, pass, miss) {
 }
 
 function testMessagePack_Infinity(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var source = Infinity;
     var packed = MessagePack.encode(source);
     var result = MessagePack.decode(packed);
@@ -931,6 +964,7 @@ function testMessagePack_Infinity(test, pass, miss) {
 }
 
 function testMessagePack_CyclicReferenceError(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var ary = [];
     var cyclicReferenceObject = {
         ary: ary
@@ -954,6 +988,7 @@ function testMessagePack_CyclicReferenceError(test, pass, miss) {
 }
 
 function testMessagePack_Bin(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
     var source = [
         new Uint8Array([]),
         new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
@@ -973,73 +1008,128 @@ function testMessagePack_Bin(test, pass, miss) {
     }
 }
 
+/*
+## JSON stringify and parse
+
+| nodes | json-enc  | json-dec  |
+|-------|-----------|-----------|
+| 10    |   0.00    |   0.00    |
+| 100   |   0.02    |   0.02    |
+| 1000  |   0.23    |   0.18    |
+| 10000 |   2.67    |   2.09    |
+
+## MessagePack encode and decode
+
+| nodes | msg-enc   | msg-dec   | msg-enc-a | msg-dec-a |
+|-------|-----------|-----------|-----------|-----------|
+| 10    |   0.74    |   0.62    |   0.02    |   0.04    |
+| 100   |   0.70    |   1.45    |   0.07    |   0.26    |
+| 1000  |   8.43    |  13.44    |   0.73    |   2.78    |
+| 10000 |  17.59    |  80.91    |   6.26    |  25.57    |
+
+ */
+
 function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
-    var result = testMessagePack_vs_JSON_bench(10);
+    var MessagePack = Codec.MessagePack;
+    var random = new Random();
 
-    console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
-
-    var result = testMessagePack_vs_JSON_bench(100);
-
-    console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
-
-    var result = testMessagePack_vs_JSON_bench(1000);
-
-    console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
-
-    var result = testMessagePack_vs_JSON_bench(10000);
-
-    console.log("MessagePack vs JSON" + JSON.stringify(result, null, 2));
+//debugger;
+    console.table( testMessagePack_vs_JSON_bench(random, 10) );
+    console.table( testMessagePack_vs_JSON_bench(random, 100) );
+    console.table( testMessagePack_vs_JSON_bench(random, 1000) );
+    console.table( testMessagePack_vs_JSON_bench(random, 10000) );
 
     test.done(pass());
 }
 
-function testMessagePack_vs_JSON_bench(nodes) {
-    var json = _createRandomJSONObject(nodes);
+function testMessagePack_vs_JSON_bench(random, nodes) {
+    var json = _createRandomJSONObject(random, nodes);
+  //var json = _createRandomJSONObjectOnlyUint64Array(random, nodes);
+  //var json = _createRandomJSONObjectOnlyInt64Array(random, nodes);
+    //var buffer = new Uint8Array(1024 * 1024); // 1MB buffer
+    var buffer = null; //new Uint8Array(1024 * 400); // 400KB buffer
+    //var ascii = false;
+    var ascii = true;
 
-    var now1    = performance.now();
-    var tmp1    = MessagePack.encode(json);
-    var now2    = performance.now();
-    var json1   = MessagePack.decode(tmp1);
-    var now3    = performance.now();
+    function tryMessagePack(json, check, encodeScore, decodeScore, binaryLength) {
+        var beginEncode = performance.now();
+        var enc         = Codec.MessagePack.encode(json, { ascii: ascii, buffer: buffer });
+        var endEncode   = performance.now();
+        var dec         = Codec.MessagePack.decode(enc, { ascii: ascii });
+        var endDecode   = performance.now();
 
-    if (!Test.likeObject(json1, json)) {
-        console.log("unmatch1");
+        if (check && !Test.likeObject(dec, json)) {
+            console.log("unmatch1");
+        }
+        encodeScore.push(endEncode - beginEncode);
+        decodeScore.push(endDecode - endEncode);
+        binaryLength.push(enc.length);
+
+    }
+    function tryJSON(json, check, encodeScore, decodeScore, binaryLength) {
+        var beginEncode = performance.now();
+        var enc         = JSON.stringify(json);
+        var endEncode   = performance.now();
+        var dec         = JSON.parse(enc);
+        var endDecode   = performance.now();
+
+        if (check && !Test.likeObject(dec, json)) {
+            console.log("unmatch2");
+        }
+        encodeScore.push(endEncode - beginEncode);
+        decodeScore.push(endDecode - endEncode);
+        binaryLength.push(enc.length);
     }
 
-    var now10   = performance.now();
-    var tmp10   = JSON.stringify(json);
-    var now11   = performance.now();
-    var json2   = JSON.parse(tmp10);
-    var now12   = performance.now();
-
-    if (!Test.likeObject(json2, json)) {
-        console.log("unmatch2");
-    }
+    // --- collect score ---
+    var times = 12;
+    var scores1 = [], scores2 = [], scores3 = [], scores4 = [];
+    var binaryLength1 = [], binaryLength2 = [];
+    for (var i = 0; i < times; ++i) { tryJSON(json, true, scores1, scores2, binaryLength1); }
+    for (var i = 0; i < times; ++i) { tryMessagePack(json, true, scores3, scores4, binaryLength2); }
 
     return {
-        nodes: nodes,
-        "MessagePack.encode": (now2 - now1).toFixed(2) + " ms",
-        "MessagePack.decode": (now3 - now2).toFixed(2) + " ms",
-        "MessagePack total": (now3 - now1).toFixed(2) + " ms",
-        "JSON.stringify": (now11 - now10).toFixed(2) + " ms",
-        "JSON.parse": (now12 - now11).toFixed(2) + " ms",
-        "JSON total": (now12 - now10).toFixed(2) + " ms",
+        "JSON": {
+            "nodes":        nodes,
+            "encode":       parseFloat( getAverage(scores1, times).toFixed(2) ),
+            "decode":       parseFloat( getAverage(scores2, times).toFixed(2) ),
+            "binaryLength": parseFloat( getAverage(binaryLength1, times).toFixed(2) ),
+        },
+        "MessagePack": {
+            "nodes":        nodes,
+            "encode":       parseFloat( getAverage(scores3, times).toFixed(2) ),
+            "decode":       parseFloat( getAverage(scores4, times).toFixed(2) ),
+            "binaryLength": parseFloat( getAverage(binaryLength2, times).toFixed(2) ),
+        }
     };
+
+    function getAverage(scores, items) {
+        var higher = 2;
+        var lower = 2;
+        var total = scores.sort(function(a, b) { return a - b; }).slice(higher, -lower).reduce(function(result, value) {
+                        return result + value;
+                    }, 0);
+
+        return total / (items - higher - lower);
+    }
 }
 
-function _createRandomJSONObject(nodes) {
+function _createRandomJSONObject(random, nodes) {
     function child(num) {
-        switch ( ((Math.random() * 9) | 0) % 9 ) {
-        case 0: return null; break;
-        case 1: return false; break;
-        case 2: return true; break;
-        case 3: return num.toString(16) + String.fromCharCode(i & 0xffff, i & 0xffff, i & 0xffff, i & 0xffff); break;
-        case 4: return num; break;
-        case 5: return -num; break;
-        case 6: return num / 123.456789; break;
-        case 7: return -(num / 123.456789); break;
-        case 8: return [child(num), child(num + 1), child(num + 2)];
+      //switch ( ((Math.random() * 9) | 0) % 9 ) {
+        switch ( random.next() % 9 ) {
+        case 0: return null;  break; // TYPE_NIL
+        case 1: return false; break; // TYPE_FALSE
+        case 2: return true;  break; // TYPE_TRUE
+        case 3: return num.toString(16);
+        //case 3: return num.toString(16) + String.fromCharCode(i & 0xffff, i & 0xffff, i & 0xffff, i & 0xffff); break;
+        case 4: return num;   break; // TYPE_POS_FIXINT, TYPE_UINT16, TYPE_UINT32, TYPE_UINT64
+        case 5: return -num;  break; // TYPE_NEG_FIXINT, TYPE_INT16, TYPE_INT32, TYPE_INT64
+        case 6: return num / 123.456789; break;    // TYPE_FLOAT64
+        case 7: return -(num / 123.456789); break; // TYPE_FLOAT64
+        case 8: return [child(num), child(num + 1), child(num + 2)]; // TYPE_FIX_ARRAY
         }
+        // TYPE_FIX_MAP
         var r = {};
         r[num] = child(num);
         return r;
@@ -1053,12 +1143,33 @@ function _createRandomJSONObject(nodes) {
     return result;
 }
 
+function _createRandomJSONObjectOnlyUint64Array(random, nodes) {
+    var result = [];
+
+    for (var i = 0; i < nodes; ++i) {
+        result[i] = 0xFFFFFFFF + 1 + i;
+    }
+    return result;
+}
+function _createRandomJSONObjectOnlyInt64Array(random, nodes) {
+    var result = [];
+
+    for (var i = 0; i < nodes; ++i) {
+        //
+        // int32 value range is from          -2147483648(-0x80000000)         to          2147483647(0x7fffffff).
+        // int64 value range is from -9223372036854775807(-0x8000000000000000) to 9223372036854775807(0x8000000000000000).
+        //
+        result[i] = -0x80000001 - i;
+    }
+    return result;
+}
+
 // === ZLib ================================================
 function testMessagePack_ZLib_inflate(test, pass, miss) {
 
 debugger;
     var source = [
-        ZLib.inflate(new Uint8Array())
+        Codec.ZLib.inflate(new Uint8Array())
     ];
     test.done(pass());
 }

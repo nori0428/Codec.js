@@ -1033,21 +1033,26 @@ var Console    = global["Console"];
 
 // --- class / interfaces ----------------------------------
 function Help(target,      // @arg Function|String - function or function-path or search keyword.
-              highlight) { // @arg String = "" - code highlight.
+              highlight,   // @arg String = "" - code highlight.
+              options) {   // @arg Object = {} - { nolink }
+                           // @options.nolink Boolean = false
                            // @desc quick online help.
 //{@dev
     _if(!/string|function/.test(typeof target),     Help, "target");
     _if(!/string|undefined/.test(typeof highlight), Help, "highlight");
 //}@dev
+    options = options || {};
 
     var resolved  = Reflection["resolve"](target);
     var search    = Reflection["getSearchLink"](resolved["path"]);
     var reference = Reflection["getReferenceLink"](resolved["path"]);
 
     _syntaxHighlight(resolved["fn"] + "", highlight);
-    Console["link"](search["url"], search["title"]);
-    if (reference) {
-        Console["link"](reference["url"], reference["title"]);
+    if (!options.noLink) {
+        Console["link"](search["url"], search["title"]);
+        if (reference) {
+            Console["link"](reference["url"], reference["title"]);
+        }
     }
 }
 
@@ -1508,7 +1513,7 @@ var CLR  = "\u001b[0m";
 
 // --- class / interfaces ----------------------------------
 function Test(moduleName, // @arg String|StringArray - target modules.
-              param) {    // @arg Object = {} - { disable, browser, worker, node, nw, button, both }
+              param) {    // @arg Object = {} - { disable, browser, worker, node, nw, button, both, ignoreError }
                           // @param.disable Boolean = false - Disable all tests.
                           // @param.browser Boolean = false - Enable the browser test.
                           // @param.worker  Boolean = false - Enable the webWorker test.
@@ -1516,6 +1521,7 @@ function Test(moduleName, // @arg String|StringArray - target modules.
                           // @param.nw      Boolean = false - Enable the node-webkit test.
                           // @param.button  Boolean = false - Show test buttons.
                           // @param.both    Boolean = false - Test the primary and secondary module.
+                          // @param.ignoreError Boolean = false - ignore error
     param = param || {};
 
     this._items   = []; // test items.
@@ -1528,6 +1534,7 @@ function Test(moduleName, // @arg String|StringArray - target modules.
     this._nw      = param["nw"]      || false;
     this._button  = param["button"]  || false;
     this._both    = param["both"]    || false;
+    this._ignoreError = param["ignoreError"] || false;
 
     if (param["disable"]) {
         this._browser = false;
@@ -1732,33 +1739,45 @@ function _testRunner(that,               // @arg this
             var flow = _getFlowFunctions(that, testFunctionName + " pass", testFunctionName + " miss");
 
                 if (_runOnNode) {
-                    try {
-
-                        //  textXxx(test, pass, miss) {
-                        //      if (true) {
-                        //          test.done(pass());
-                        //      } else {
-                        //          test.done(miss());
-                        //      }
-                        //  }
-
+                    if (!that._ignoreError) {
                         fn(task, flow.pass, flow.miss);
-                    } catch (o_O) { // [!] catch uncaught exception
-                        flow.miss();
-                        console.log(ERR + fn + CLR);
-                        task.message(ERR + o_O.message + CLR + " in " + testFunctionName + " function").miss();
-//                      throw o_O;
+                    } else {
+                        try {
+
+                            //  textXxx(test, pass, miss) {
+                            //      if (true) {
+                            //          test.done(pass());
+                            //      } else {
+                            //          test.done(miss());
+                            //      }
+                            //  }
+
+                            fn(task, flow.pass, flow.miss);
+                        } catch (o_O) { // [!] catch uncaught exception
+                            flow.miss();
+                            console.log(ERR + fn + CLR);
+                            task.message(ERR + o_O.message + CLR + " in " + testFunctionName + " function").miss();
+    //                      throw o_O;
+                        }
                     }
                 } else if (_runOnBrowser || _runOnNodeWebKit) {
-                    try {
+                    if (!that._ignoreError) {
                         fn(task, flow.pass, flow.miss);
-                    } catch (o_O) {
-                        flow.miss();
-                        global["Help"](fn, testFunctionName);
-                        task.message(o_O.message + " in " + testFunctionName + " function").miss();
+                    } else {
+                        try {
+                            fn(task, flow.pass, flow.miss);
+                        } catch (o_O) {
+                            flow.miss();
+                            global["Help"](fn, testFunctionName);
+                            task.message(o_O.message + " in " + testFunctionName + " function").miss();
+                        }
                     }
                 } else {
-                    fn(task, flow.pass, flow.miss);
+                    if (!that._ignoreError) {
+                        fn(task, flow.pass, flow.miss);
+                    } else {
+                        fn(task, flow.pass, flow.miss);
+                    }
                 }
         }
     }

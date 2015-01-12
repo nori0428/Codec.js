@@ -11,6 +11,7 @@ onmessage = function(event) {
         self.console.error = function() {};
     }
 
+    importScripts("../node_modules/uupaa.random.js/lib/Random.js");
     importScripts("../node_modules/uupaa.hash.js/lib/Hash.js");
     importScripts(".././test/wmtools.js");
     importScripts("../lib/Codec.js");
