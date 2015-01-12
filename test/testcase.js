@@ -1,7 +1,7 @@
 var ModuleTestCodec = (function(global) {
 
 var _isNodeOrNodeWebKit = !!global.global;
-var _runOnNodeWebKit =  _isNodeOrNodeWebKit && /native/.test(setTimeout);
+var _runOnNodeWebKit =  _isNodeOrNodeWebKit &&  /native/.test(setTimeout);
 var _runOnNode       =  _isNodeOrNodeWebKit && !/native/.test(setTimeout);
 var _runOnWorker     = !_isNodeOrNodeWebKit && "WorkerLocation" in global;
 var _runOnBrowser    = !_isNodeOrNodeWebKit && "document" in global;
@@ -17,7 +17,7 @@ var test = new Test("Codec", {
         ignoreError:false,
     });
 
-if (0) {
+if (1) {
     if (_runOnNodeWebKit || _runOnWorker || _runOnBrowser) {
         if (typeof Uint8Array !== "undefined") {
             test.add([
@@ -81,6 +81,7 @@ if (0) {
             testMessagePack_CyclicReferenceError,
             // --- Ext Types ---
             testMessagePack_Bin, // Uint8Array
+            testMessagePack_Ext,
         ]);
     }
     if (Codec.ZLib) {
@@ -988,14 +989,33 @@ function testMessagePack_CyclicReferenceError(test, pass, miss) {
 }
 
 function testMessagePack_Bin(test, pass, miss) {
+    var array0xFF = [];
+    for (var i = 0, iz = 0xFF + 1; i < iz; ++i) {
+        array0xFF.push(i);
+    }
+    var array0xFFFF = [];
+    for (var i = 0, iz = 0xFFFF + 1; i < iz; ++i) {
+        array0xFFFF.push(i);
+    }
+    var array0x20FFFF = [];
+    for (var i = 0, iz = 0x20FFFF + 1; i < iz; ++i) {
+        array0x20FFFF.push(i);
+    }
+
     var MessagePack = Codec.MessagePack;
     var source = [
         new Uint8Array([]),
-        new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
+        new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]),
+        new Uint8Array(array0xFF),
+        new Uint8Array(array0xFFFF),
+        new Uint8Array(array0x20FFFF),
     ];
     var cases = {
         "0": Test.likeArray(MessagePack.decode(MessagePack.encode(source[0])), source[0]),
         "1": Test.likeArray(MessagePack.decode(MessagePack.encode(source[1])), source[1]),
+        "2": Test.likeArray(MessagePack.decode(MessagePack.encode(source[2])), source[2]),
+        "3": Test.likeArray(MessagePack.decode(MessagePack.encode(source[3])), source[3]),
+        "4": Test.likeArray(MessagePack.decode(MessagePack.encode(source[4])), source[4]),
     };
 
     var result = JSON.stringify(cases, null, 2);
@@ -1008,12 +1028,62 @@ function testMessagePack_Bin(test, pass, miss) {
     }
 }
 
+function testMessagePack_Ext(test, pass, miss) {
+    var MessagePack = Codec.MessagePack;
+    var TYPE_NONE = 0x00;
+    var TYPE_DATE = 0x01;
+    var options = {
+            extenc: function(data) { // @arg Any
+                                     // @ret Object { data: Uint8Array, type: INT8 }
+                if (data instanceof Date) {
+                    var time = data.getTime();
+                    return { data: MessagePack.encode(time), type: TYPE_DATE };
+                }
+                return { data: new Uint8Array(0), type: TYPE_NONE };
+            },
+            extdec: function(data,   // @arg Uint8Array
+                             type) { // @arg Int8
+                                     // @ret Any
+                if (type === TYPE_DATE) {
+                    var time = MessagePack.decode(data);
+                    var date = new Date();
+                    date.setTime(time);
+                    return date;
+                }
+            }
+        };
+    var source = [
+            new Date(),
+        ];
+    var cases = {
+            "0": _likeDate(MessagePack.decode(MessagePack.encode(source[0], options), options), source[0]),
+        };
+
+    var result = JSON.stringify(cases, null, 2);
+    console.log(result);
+
+    if (/false/.test(result)) {
+        test.done(miss());
+    } else {
+        test.done(pass());
+    }
+    function _likeDate(a, b) {
+        if (a.getTime() === b.getTime()) {
+            return true;
+        }
+        return false;
+    }
+}
+
+
+
+
+
 /*
 ## JSON stringify and parse
 
 | nodes | json-enc  | json-dec  |
 |-------|-----------|-----------|
-| 10    |   0.00    |   0.00    |
 | 100   |   0.02    |   0.02    |
 | 1000  |   0.23    |   0.18    |
 | 10000 |   2.67    |   2.09    |
@@ -1022,40 +1092,53 @@ function testMessagePack_Bin(test, pass, miss) {
 
 | nodes | msg-enc   | msg-dec   | msg-enc-a | msg-dec-a |
 |-------|-----------|-----------|-----------|-----------|
-| 10    |   0.74    |   0.62    |   0.02    |   0.04    |
 | 100   |   0.70    |   1.45    |   0.07    |   0.26    |
 | 1000  |   8.43    |  13.44    |   0.73    |   2.78    |
-| 10000 |  17.59    |  80.91    |   6.26    |  25.57    |
+| 10000 |  17.59    |  80.91    |   1.98    |  19.78    |
 
  */
 
 function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
     var MessagePack = Codec.MessagePack;
     var random = new Random();
+    var options = { ascii: true, buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
+    var nodes = 10000;
+    var json_TYPE_MIX       = _TYPE_MIX(random, nodes);
+    var json_TYPE_INT8      = _TYPE_INT8(random, nodes);
+    var json_TYPE_INT16     = _TYPE_INT16(random, nodes);
+    var json_TYPE_INT32     = _TYPE_INT32(random, nodes);
+    var json_TYPE_INT64     = _TYPE_INT64(random, nodes);
+    var json_TYPE_UINT8     = _TYPE_UINT8(random, nodes);
+    var json_TYPE_UINT16    = _TYPE_UINT16(random, nodes);
+    var json_TYPE_UINT32    = _TYPE_UINT32(random, nodes);
+    var json_TYPE_UINT64    = _TYPE_UINT64(random, nodes);
+    var json_TYPE_FLOAT64   = _TYPE_FLOAT64(random, nodes);
+    var json_TYPE_FIX_UINT  = _TYPE_FIX_UINT(random, nodes);
+    var json_TYPE_FIX_ARRAY = _TYPE_FIX_ARRAY(random, nodes);
 
-//debugger;
-    console.table( testMessagePack_vs_JSON_bench(random, 10) );
-    console.table( testMessagePack_vs_JSON_bench(random, 100) );
-    console.table( testMessagePack_vs_JSON_bench(random, 1000) );
-    console.table( testMessagePack_vs_JSON_bench(random, 10000) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_MIX",       json_TYPE_MIX, nodes, {}) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_MIX(ascii)",json_TYPE_MIX, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_INT8",      json_TYPE_INT8, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_INT16",     json_TYPE_INT16, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_INT32",     json_TYPE_INT32, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_INT64",     json_TYPE_INT64, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_UINT8",     json_TYPE_UINT8, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_UINT16",    json_TYPE_UINT16, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_UINT32",    json_TYPE_UINT32, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_UINT64",    json_TYPE_UINT64, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_FLOAT64",   json_TYPE_FLOAT64, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_FIX_UINT",  json_TYPE_FIX_UINT, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_FIX_ARRAY", json_TYPE_FIX_ARRAY, nodes, options) );
 
     test.done(pass());
 }
 
-function testMessagePack_vs_JSON_bench(random, nodes) {
-    var json = _createRandomJSONObject(random, nodes);
-  //var json = _createRandomJSONObjectOnlyUint64Array(random, nodes);
-  //var json = _createRandomJSONObjectOnlyInt64Array(random, nodes);
-    //var buffer = new Uint8Array(1024 * 1024); // 1MB buffer
-    var buffer = null; //new Uint8Array(1024 * 400); // 400KB buffer
-    //var ascii = false;
-    var ascii = true;
-
+function testMessagePack_vs_JSON_bench(theme, json, nodes, options) {
     function tryMessagePack(json, check, encodeScore, decodeScore, binaryLength) {
         var beginEncode = performance.now();
-        var enc         = Codec.MessagePack.encode(json, { ascii: ascii, buffer: buffer });
+        var enc         = Codec.MessagePack.encode(json, options);
         var endEncode   = performance.now();
-        var dec         = Codec.MessagePack.decode(enc, { ascii: ascii });
+        var dec         = Codec.MessagePack.decode(enc, options);
         var endDecode   = performance.now();
 
         if (check && !Test.likeObject(dec, json)) {
@@ -1090,13 +1173,13 @@ function testMessagePack_vs_JSON_bench(random, nodes) {
 
     return {
         "JSON": {
-            "nodes":        nodes,
+            "nodes":        theme + " " + nodes,
             "encode":       parseFloat( getAverage(scores1, times).toFixed(2) ),
             "decode":       parseFloat( getAverage(scores2, times).toFixed(2) ),
             "binaryLength": parseFloat( getAverage(binaryLength1, times).toFixed(2) ),
         },
         "MessagePack": {
-            "nodes":        nodes,
+            "nodes":        theme + " " + nodes,
             "encode":       parseFloat( getAverage(scores3, times).toFixed(2) ),
             "decode":       parseFloat( getAverage(scores4, times).toFixed(2) ),
             "binaryLength": parseFloat( getAverage(binaryLength2, times).toFixed(2) ),
@@ -1114,7 +1197,7 @@ function testMessagePack_vs_JSON_bench(random, nodes) {
     }
 }
 
-function _createRandomJSONObject(random, nodes) {
+function _TYPE_MIX(random, nodes) {
     function child(num) {
       //switch ( ((Math.random() * 9) | 0) % 9 ) {
         switch ( random.next() % 9 ) {
@@ -1143,23 +1226,67 @@ function _createRandomJSONObject(random, nodes) {
     return result;
 }
 
-function _createRandomJSONObjectOnlyUint64Array(random, nodes) {
+function _TYPE_UINT8(random, nodes) {
+    var result = [];
+    for (var i = 0; i < nodes; ++i) { result[i] = 0x00 + (i % 0xff); }
+    return result;
+}
+function _TYPE_UINT16(random, nodes) {
+    var result = [];
+    for (var i = 0; i < nodes; ++i) { result[i] = 0x100 + (i % 0xff); }
+    return result;
+}
+function _TYPE_UINT32(random, nodes) {
+    var result = [];
+    for (var i = 0; i < nodes; ++i) { result[i] = 0x10000 + (i % 0xff); }
+    return result;
+}
+function _TYPE_UINT64(random, nodes) {
+    var result = [];
+    for (var i = 0; i < nodes; ++i) { result[i] = 0x100000000 + (i % 0xff); }
+    return result;
+}
+function _TYPE_INT8(random, nodes) {
+    var result = [];
+    for (var i = 0; i < nodes; ++i) { result[i] = -33 - (i % 50); }
+    return result;
+}
+function _TYPE_INT16(random, nodes) {
+    var result = [];
+    for (var i = 0; i < nodes; ++i) { result[i] = -128 - (i % 50); }
+    return result;
+}
+function _TYPE_INT32(random, nodes) {
+    var result = [];
+    for (var i = 0; i < nodes; ++i) { result[i] = -0x8001 - (i % 0xff); }
+    return result;
+}
+function _TYPE_INT64(random, nodes) {
+    var result = [];
+    for (var i = 0; i < nodes; ++i) { result[i] = -0x80000001 - i; }
+    return result;
+}
+function _TYPE_FLOAT64(random, nodes) {
     var result = [];
 
     for (var i = 0; i < nodes; ++i) {
-        result[i] = 0xFFFFFFFF + 1 + i;
+        result[i] = 0.1234567890123 + i;
     }
     return result;
 }
-function _createRandomJSONObjectOnlyInt64Array(random, nodes) {
+function _TYPE_FIX_ARRAY(random, nodes) {
     var result = [];
 
     for (var i = 0; i < nodes; ++i) {
-        //
-        // int32 value range is from          -2147483648(-0x80000000)         to          2147483647(0x7fffffff).
-        // int64 value range is from -9223372036854775807(-0x8000000000000000) to 9223372036854775807(0x8000000000000000).
-        //
-        result[i] = -0x80000001 - i;
+        result.push( [] );
+    }
+    return result;
+}
+function _TYPE_FIX_UINT(random, nodes) {
+    var result = [];
+
+    for (var i = 0; i < nodes; ++i) {
+        result.push( i % 128 ); // 0 - 127
     }
     return result;
 }
