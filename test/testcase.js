@@ -869,8 +869,8 @@ function testMessagePack_InvalidTypes(test, pass, miss) {
 
     try {
         var source = new Date;
-        var packed = MessagePack.encode(source);
-        var result = MessagePack.decode(packed);
+        var packed = MessagePack.encode(source, { extenc: null });
+        var result = MessagePack.decode(packed, { extdec: null });
 
         test.done(miss());
     } catch (o_o) {
@@ -1032,27 +1032,25 @@ function testMessagePack_Bin(test, pass, miss) {
 
 function testMessagePack_Ext(test, pass, miss) {
     var MessagePack = Codec.MessagePack;
-    var TYPE_NONE = 0x00;
-    var TYPE_DATE = 0x01;
     var options = {
-            extenc: function(data) { // @arg Any
-                                     // @ret Object { data: Uint8Array, type: INT8 }
-                if (data instanceof Date) {
-                    var time = data.getTime();
-                    return { data: MessagePack.encode(time), type: TYPE_DATE };
-                }
-                return { data: new Uint8Array(0), type: TYPE_NONE };
-            },
-            extdec: function(data,   // @arg Uint8Array
-                             type) { // @arg Int8
-                                     // @ret Any
-                if (type === TYPE_DATE) {
-                    var time = MessagePack.decode(data);
-                    var date = new Date();
-                    date.setTime(time);
-                    return date;
-                }
-            }
+//            extenc: function(data) { // @arg Any
+//                                     // @ret Object { data: Uint8Array, type: INT8 }
+//                if (data instanceof Date) {
+//                    var time = data.getTime();
+//                    return { data: MessagePack.encode(time), type: TYPE_DATE };
+//                }
+//                return { data: new Uint8Array(0), type: TYPE_NONE };
+//            },
+//            extdec: function(data,   // @arg Uint8Array
+//                             type) { // @arg Int8
+//                                     // @ret Any
+//                if (type === TYPE_DATE) {
+//                    var time = MessagePack.decode(data);
+//                    var date = new Date();
+//                    date.setTime(time);
+//                    return date;
+//                }
+//            }
         };
     var source = [
             new Date(),
