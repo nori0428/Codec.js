@@ -8,6 +8,12 @@ var _runOnBrowser    = !_isNodeOrNodeWebKit && "document" in global;
 
 global["BENCHMARK"] = true;
 
+if (console) {
+    if (!console.table) {
+        console.table = console.dir;
+    }
+}
+
 var test = new Test("Codec", {
         disable:    false,
         browser:    true,
@@ -1136,12 +1142,15 @@ function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
 }
 
 function testMessagePack_vs_JSON_bench(theme, json, nodes, options) {
+    function now() {
+        return global["performance"] ? performance.now() : Date.now();
+    }
     function tryMessagePack(json, check, encodeScore, decodeScore, binaryLength) {
-        var beginEncode = performance.now();
+        var beginEncode = now();
         var enc         = Codec.MessagePack.encode(json, options);
-        var endEncode   = performance.now();
+        var endEncode   = now();
         var dec         = Codec.MessagePack.decode(enc, options);
-        var endDecode   = performance.now();
+        var endDecode   = now();
 
         if (check && !Test.likeObject(dec, json)) {
             console.log("unmatch1");
@@ -1152,11 +1161,11 @@ function testMessagePack_vs_JSON_bench(theme, json, nodes, options) {
 
     }
     function tryJSON(json, check, encodeScore, decodeScore, binaryLength) {
-        var beginEncode = performance.now();
+        var beginEncode = now();
         var enc         = JSON.stringify(json);
-        var endEncode   = performance.now();
+        var endEncode   = now();
         var dec         = JSON.parse(enc);
-        var endDecode   = performance.now();
+        var endDecode   = now();
 
         if (check && !Test.likeObject(dec, json)) {
             console.log("unmatch2");
