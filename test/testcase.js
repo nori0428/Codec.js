@@ -6,14 +6,16 @@ var _runOnNode       =  _isNodeOrNodeWebKit && !/native/.test(setTimeout);
 var _runOnWorker     = !_isNodeOrNodeWebKit && "WorkerLocation" in global;
 var _runOnBrowser    = !_isNodeOrNodeWebKit && "document" in global;
 
+global["BENCHMARK"] = true;
+
 var test = new Test("Codec", {
         disable:    false,
         browser:    true,
-        worker:     false,
-        node:       false,
-        nw:         false,
-        button:     false,
-        both:       false,
+        worker:     true,
+        node:       true,
+        nw:         true,
+        button:     true,
+        both:       true,
         ignoreError:false,
     });
 
@@ -100,7 +102,7 @@ if (1) {
     }
 }
 
-if (0) {
+if (1) {
     if (typeof document !== "undefined" && global.localStorage) {
         test.add([ testDoublerStorage ]);
     }
@@ -1101,7 +1103,8 @@ function testMessagePack_Ext(test, pass, miss) {
 function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
     var MessagePack = Codec.MessagePack;
     var random = new Random();
-    var options = { ascii: true, buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
+    var options  = { askey: true, ascii: true,  buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
+    var options2 = { askey: true, ascii: false, buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
     var nodes = 10000;
     var json_TYPE_MIX       = _TYPE_MIX(random, nodes);
     var json_TYPE_INT8      = _TYPE_INT8(random, nodes);
@@ -1117,7 +1120,8 @@ function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
     var json_TYPE_FIX_ARRAY = _TYPE_FIX_ARRAY(random, nodes);
 
     console.table( testMessagePack_vs_JSON_bench("TYPE_MIX",       json_TYPE_MIX, nodes, {}) );
-    console.table( testMessagePack_vs_JSON_bench("TYPE_MIX(ascii)",json_TYPE_MIX, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_MIX(askey)",json_TYPE_MIX, nodes, options2) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_MIX(askey,ascii)",json_TYPE_MIX, nodes, options) );
     console.table( testMessagePack_vs_JSON_bench("TYPE_INT8",      json_TYPE_INT8, nodes, options) );
     console.table( testMessagePack_vs_JSON_bench("TYPE_INT16",     json_TYPE_INT16, nodes, options) );
     console.table( testMessagePack_vs_JSON_bench("TYPE_INT32",     json_TYPE_INT32, nodes, options) );
