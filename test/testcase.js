@@ -1109,6 +1109,7 @@ function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
     var random = new Random();
     var options  = { askey: true, ascii: true,  buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
     var options2 = { askey: true, ascii: false, buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
+    var options3 = { quickly: true,             buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
     var nodes = 10000;
     var json_TYPE_MIX       = _TYPE_MIX(random, nodes);
     var json_TYPE_INT8      = _TYPE_INT8(random, nodes);
@@ -1125,7 +1126,7 @@ function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
 
     console.table( testMessagePack_vs_JSON_bench("TYPE_MIX",       json_TYPE_MIX, nodes, {}) );
     console.table( testMessagePack_vs_JSON_bench("TYPE_MIX(askey)",json_TYPE_MIX, nodes, options2) );
-    console.table( testMessagePack_vs_JSON_bench("TYPE_MIX(askey,ascii)",json_TYPE_MIX, nodes, options) );
+    console.table( testMessagePack_vs_JSON_bench("TYPE_MIX(askey,ascii)",json_TYPE_MIX, nodes, options3) );
     console.table( testMessagePack_vs_JSON_bench("TYPE_INT8",      json_TYPE_INT8, nodes, options) );
     console.table( testMessagePack_vs_JSON_bench("TYPE_INT16",     json_TYPE_INT16, nodes, options) );
     console.table( testMessagePack_vs_JSON_bench("TYPE_INT32",     json_TYPE_INT32, nodes, options) );
