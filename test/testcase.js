@@ -876,8 +876,8 @@ function testMessagePack_InvalidTypes(test, pass, miss) {
 
     try {
         var source = new Date;
-        var packed = MessagePack.encode(source, { extenc: null });
-        var result = MessagePack.decode(packed, { extdec: null });
+        var packed = MessagePack.encode(source, { pack:   null });
+        var result = MessagePack.decode(packed, { unpack: null });
 
         test.done(miss());
     } catch (o_o) {
