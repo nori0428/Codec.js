@@ -89,7 +89,8 @@ if (1) {
             testMessagePack_CyclicReferenceError,
             // --- Ext Types ---
             testMessagePack_Bin, // Uint8Array
-            testMessagePack_Ext,
+            testMessagePack_ExtDate,
+            testMessagePack_ExtFoo,
         ]);
     }
     if (Codec.ZLib) {
@@ -103,7 +104,7 @@ if (1) {
 if (1) {
     if (Codec.MessagePack) {
         test.add([
-            testMessagePack_vs_JSON_BenchMark,
+            //testMessagePack_vs_JSON_BenchMark,
         ]);
     }
 }
@@ -1036,28 +1037,9 @@ function testMessagePack_Bin(test, pass, miss) {
     }
 }
 
-function testMessagePack_Ext(test, pass, miss) {
+function testMessagePack_ExtDate(test, pass, miss) {
     var MessagePack = Codec.MessagePack;
-    var options = {
-//            extenc: function(data) { // @arg Any
-//                                     // @ret Object { data: Uint8Array, type: INT8 }
-//                if (data instanceof Date) {
-//                    var time = data.getTime();
-//                    return { data: MessagePack.encode(time), type: TYPE_DATE };
-//                }
-//                return { data: new Uint8Array(0), type: TYPE_NONE };
-//            },
-//            extdec: function(data,   // @arg Uint8Array
-//                             type) { // @arg Int8
-//                                     // @ret Any
-//                if (type === TYPE_DATE) {
-//                    var time = MessagePack.decode(data);
-//                    var date = new Date();
-//                    date.setTime(time);
-//                    return date;
-//                }
-//            }
-        };
+    var options = {};
     var source = [
             new Date(),
         ];
@@ -1078,6 +1060,51 @@ function testMessagePack_Ext(test, pass, miss) {
             return true;
         }
         return false;
+    }
+}
+
+function testMessagePack_ExtFoo(test, pass, miss) {
+    function Foo(a,b,c) {
+        this._a = a;
+        this._b = b;
+        this._c = c;
+    }
+    Foo.pack = function(source) { // @arg Any
+                                  // @ret Uint8Array
+        var result = new Uint8Array(3);
+        result[0] = source._a;
+        result[1] = source._b;
+        result[2] = source._c;
+        return result;
+    };
+    Foo.unpack = function(source) { // @arg Uint8Array
+                                    // @ret Any
+        var a = source[0];
+        var b = source[1];
+        var c = source[2];
+        return new Foo(a, b, c);
+    };
+    Foo.prototype.toJSON = function() {
+        return { a: this._a, b: this._b, c: this._c };
+    };
+    global.Foo = Foo;
+
+    var MessagePack = Codec.MessagePack;
+    var options = {};
+    var source = [
+            new Foo(1,2,3)
+        ];
+    var cases = {
+            "0": Test.likeObject(MessagePack.decode(MessagePack.encode(source[0], options), options), source[0]),
+        };
+
+    var result = JSON.stringify(cases, null, 2);
+    console.log(result);
+
+    if (/false/.test(result)) {
+        test.done(miss());
+    } else {
+        test.done(pass());
     }
 }
 
@@ -1109,7 +1136,7 @@ function testMessagePack_vs_JSON_BenchMark(test, pass, miss) {
     var random = new Random();
     var options  = { askey: true, ascii: true,  buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
     var options2 = { askey: true, ascii: false, buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
-    var options3 = { quickly: true,             buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
+    var options3 = { askey: true, ascii: true,  buffer: new Uint8Array(1024 * 1024) }; // 1MB buffer
     var nodes = 10000;
     var json_TYPE_MIX       = _TYPE_MIX(random, nodes);
     var json_TYPE_INT8      = _TYPE_INT8(random, nodes);
