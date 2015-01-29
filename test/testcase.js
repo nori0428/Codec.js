@@ -27,6 +27,12 @@ var test = new Test("Codec", {
 
 if (1) {
     if (_runOnNodeWebKit || _runOnWorker || _runOnBrowser) {
+        test.add([
+            testToArrayBufferXHRError,
+            testToArrayBufferFileReader,
+        ]);
+    }
+    if (_runOnNodeWebKit || _runOnWorker || _runOnBrowser) {
         if (typeof Uint8Array !== "undefined") {
             test.add([
                 // --- TypedArray and ArrayBuffer ---
@@ -118,6 +124,44 @@ if (1) {
 return test.run().clone();
 
 // ---------------------------------------------------------
+function testToArrayBufferXHRError(test, pass, miss) {
+    var source = "./404.png";
+
+    var success = function(result, source) {
+        test.done(miss());
+    };
+
+    var error = function(error, source) {
+        if (error instanceof Error) {
+            test.done(pass());
+            return;
+        }
+        test.done(miss());
+    };
+
+    Codec.toArrayBuffer(source, success, error);
+}
+
+function testToArrayBufferFileReader(test, pass, miss) {
+    var source = new Blob(["hello"], { type: "text/plain" });
+
+    var success = function(result, source) {
+        if (result && result.byteLength === 5) {
+            var text = String.fromCharCode.apply(null, new Uint8Array(result));
+            if (text === "hello") {
+                test.done(pass());
+                return;
+            }
+        }
+        test.done(miss());
+    };
+    var error = function(error, source) {
+        test.done(miss());
+    };
+
+    Codec.toArrayBuffer(source, success, error);
+}
+
 function testTypedArrayAndArrayBuffer(test, pass, miss) {
     //
     // 1. ArrayBuffer.slice() は新たにメモリを確保し、配列の一部をコピーする
