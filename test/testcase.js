@@ -26,9 +26,13 @@ var test = new Test("Codec", {
     });
 
 if (1) {
-    if (_runOnNodeWebKit || _runOnWorker || _runOnBrowser) {
+    if (_runOnWorker || _runOnBrowser) {
         test.add([
             testToArrayBufferXHRError,
+        ]);
+    }
+    if (_runOnNodeWebKit || _runOnWorker || _runOnBrowser) {
+        test.add([
             testToArrayBufferFileReader,
         ]);
     }
