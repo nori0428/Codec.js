@@ -106,15 +106,17 @@ if (1) {
     if (Codec.ZLib) {
         test.add([
             // --- ZLib ---
-          //testMessagePack_ZLib_inflate,
+            //testMessagePack_ZLib_inflate,
         ]);
     }
-}
-
-if (1) {
     if (Codec.MessagePack) {
         test.add([
             //testMessagePack_vs_JSON_BenchMark,
+        ]);
+    }
+    if (Codec.PNG) {
+        test.add([
+            testPNG_png,
         ]);
     }
 }
@@ -1381,10 +1383,18 @@ function _TYPE_FIX_UINT(random, nodes) {
 // === ZLib ================================================
 function testMessagePack_ZLib_inflate(test, pass, miss) {
 
-debugger;
     var source = [
         Codec.ZLib.inflate(new Uint8Array())
     ];
+    test.done(pass());
+}
+
+// === PNG ================================================
+function testPNG_png(test, pass, miss) {
+
+    var source = new Uint8Array(0);
+    var data = Codec.PNG.decode(source, Codec.PNG.parse(source));
+
     test.done(pass());
 }
 

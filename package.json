@@ -1,9 +1,9 @@
 {
   "name": "uupaa.codec.js",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Codec functions.",
   "url": "https://github.com/uupaa/Codec.js",
-  "keywords": ["Codec", "UTF8", "Base64", "Doubler", "MessagePack", "Zlib", "uupaa", "WebModule", "Unstable"],
+  "keywords": ["Codec", "UTF8", "Base64", "Doubler", "MessagePack", "Zlib", "PNG", "APNG", "uupaa", "WebModule", "Unstable"],
   "repository": {
     "type": "git",
     "url": "https://github.com/uupaa/Codec.js.git"
@@ -29,21 +29,21 @@
   },
   "webmodule": {
     "develop": false,
-    "label": ["@dev", "@utf8", "@base64", "@doubler", "@messagepack", "@zlib"],
+    "label": ["@dev", "@utf8", "@base64", "@doubler", "@messagepack", "@zlib", "@png"],
     "browser": {
-      "source": ["lib/Codec.js", "lib/Doubler.js", "lib/MessagePack.js", "lib/ZLib.js"],
+      "source": ["lib/Codec.js", "lib/Doubler.js", "lib/MessagePack.js", "lib/ZLib.js", "lib/PNG.js"],
       "output": "release/Codec.b.min.js"
     },
     "worker": {
-      "source": ["lib/Codec.js", "lib/Doubler.js", "lib/MessagePack.js", "lib/ZLib.js"],
+      "source": ["lib/Codec.js", "lib/Doubler.js", "lib/MessagePack.js", "lib/ZLib.js", "lib/PNG.js"],
       "output": "release/Codec.w.min.js"
     },
     "node": {
-      "source": ["lib/Codec.js", "lib/Doubler.js", "lib/MessagePack.js", "lib/ZLib.js"],
+      "source": ["lib/Codec.js", "lib/Doubler.js", "lib/MessagePack.js", "lib/ZLib.js", "lib/PNG.js"],
       "output": "release/Codec.n.min.js"
     },
     "nw": {
-      "source": ["lib/Codec.js", "lib/Doubler.js", "lib/MessagePack.js", "lib/ZLib.js"],
+      "source": ["lib/Codec.js", "lib/Doubler.js", "lib/MessagePack.js", "lib/ZLib.js", "lib/PNG.js"],
       "output": "release/Codec.nw.min.js"
     }
   },
@@ -51,7 +51,8 @@
     "uupaa.hash.js": ""
   },
   "devDependencies": {
-    "uupaa.random.js": ""
+    "uupaa.random.js": "",
+    "uupaa.testresource.js": ""
   },
   "lib": "./lib/",
   "main": "./index.js",
