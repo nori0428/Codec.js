@@ -29,6 +29,7 @@ console.log( Codec.Doubler.decode(...) );
 console.log( Codec.MessagePack.encode(...) );
 console.log( Codec.MessagePack.decode(...) );
 console.log( Codec.ZLib.inflate(...) );
+console.log( Codec.PNG.parse(...) );
 </script>
 ```
 
