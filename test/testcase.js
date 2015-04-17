@@ -26,6 +26,16 @@ var test = new Test("Codec", {
     });
 
 if (1) {
+    if (_runOnWorker || _runOnBrowser) {
+        test.add([
+            testToArrayBufferXHRError,
+        ]);
+    }
+    if (_runOnNodeWebKit || _runOnWorker || _runOnBrowser) {
+        test.add([
+            testToArrayBufferFileReader,
+        ]);
+    }
     if (_runOnNodeWebKit || _runOnWorker || _runOnBrowser) {
         if (typeof Uint8Array !== "undefined") {
             test.add([
@@ -96,15 +106,17 @@ if (1) {
     if (Codec.ZLib) {
         test.add([
             // --- ZLib ---
-          //testMessagePack_ZLib_inflate,
+            //testMessagePack_ZLib_inflate,
         ]);
     }
-}
-
-if (1) {
     if (Codec.MessagePack) {
         test.add([
             //testMessagePack_vs_JSON_BenchMark,
+        ]);
+    }
+    if (Codec.PNG) {
+        test.add([
+            testPNG_png,
         ]);
     }
 }
@@ -118,6 +130,44 @@ if (1) {
 return test.run().clone();
 
 // ---------------------------------------------------------
+function testToArrayBufferXHRError(test, pass, miss) {
+    var source = "./404.png";
+
+    var success = function(result, source) {
+        test.done(miss());
+    };
+
+    var error = function(error, source) {
+        if (error instanceof Error) {
+            test.done(pass());
+            return;
+        }
+        test.done(miss());
+    };
+
+    Codec.toArrayBuffer(source, success, error);
+}
+
+function testToArrayBufferFileReader(test, pass, miss) {
+    var source = new Blob(["hello"], { type: "text/plain" });
+
+    var success = function(result, source) {
+        if (result && result.byteLength === 5) {
+            var text = String.fromCharCode.apply(null, new Uint8Array(result));
+            if (text === "hello") {
+                test.done(pass());
+                return;
+            }
+        }
+        test.done(miss());
+    };
+    var error = function(error, source) {
+        test.done(miss());
+    };
+
+    Codec.toArrayBuffer(source, success, error);
+}
+
 function testTypedArrayAndArrayBuffer(test, pass, miss) {
     //
     // 1. ArrayBuffer.slice() は新たにメモリを確保し、配列の一部をコピーする
@@ -1333,10 +1383,18 @@ function _TYPE_FIX_UINT(random, nodes) {
 // === ZLib ================================================
 function testMessagePack_ZLib_inflate(test, pass, miss) {
 
-debugger;
     var source = [
         Codec.ZLib.inflate(new Uint8Array())
     ];
+    test.done(pass());
+}
+
+// === PNG ================================================
+function testPNG_png(test, pass, miss) {
+
+    var source = new Uint8Array(0);
+    var data = Codec.PNG.decode(source, Codec.PNG.parse(source));
+
     test.done(pass());
 }
 

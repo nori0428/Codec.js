@@ -18,6 +18,7 @@ onmessage = function(event) {
     importScripts("../lib/Doubler.js");
     importScripts("../lib/MessagePack.js");
     importScripts("../lib/ZLib.js");
+    importScripts("../lib/PNG.js");
     importScripts("../release/Codec.w.min.js");
     importScripts("./testcase.js");
 
